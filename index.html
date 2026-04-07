@@ -55,12 +55,16 @@ h1 {
     background: #1f3b4d;
     border-radius: 20px;
     overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
 .product img {
     width: 100%;
-    height: 140px;
-    object-fit: cover;
+    height: 180px;
+    object-fit: contain;
+    background: #fff;
+    padding: 5px;
+    cursor: pointer;
 }
 
 .product-info {
@@ -90,6 +94,27 @@ h1 {
     border-radius: 10px;
     border: none;
     margin-top: 5px;
+}
+
+/* نافذة تكبير الصورة */
+#imageModal {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    justify-content: center;
+    align-items: center;
+}
+
+/* الصورة الكبيرة */
+#modalImg {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 15px;
 }
 </style>
 </head>
@@ -123,6 +148,11 @@ h1 {
 
 <div id="products"></div>
 
+<!-- تكبير الصورة -->
+<div id="imageModal" onclick="closeImage()">
+    <img id="modalImg">
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
@@ -141,7 +171,7 @@ const fastProducts = [
 { name:"⭐ Best Seller", image:"https://i.imgur.com/QlRphfQ.jpg", link:"#"}
 ];
 
-// فتح/غلق admin
+// فتح admin
 function openAdmin(){
     tap++;
     if(tap >= 5){
@@ -157,7 +187,7 @@ function openAdmin(){
             login.style.display = "block";
         }
 
-        loadProducts(); // تحديث
+        loadProducts();
     }
 }
 
@@ -191,7 +221,24 @@ async function logout(){
     loadProducts();
 }
 
-// عرض
+// تحويل صورة AliExpress إلى HD
+function getHDImage(url){
+    if(!url) return "";
+    return url.replace(/_\d+x\d+\.jpg/, ".jpg");
+}
+
+// فتح الصورة
+function openImage(src){
+    document.getElementById("modalImg").src = src;
+    document.getElementById("imageModal").style.display = "flex";
+}
+
+// غلق الصورة
+function closeImage(){
+    document.getElementById("imageModal").style.display = "none";
+}
+
+// عرض المنتجات
 function displayProducts(products){
     let html = "";
 
@@ -200,7 +247,8 @@ function displayProducts(products){
     products.forEach(p=>{
         html += `
         <div class="product">
-            <img src="${p.image}" loading="lazy">
+            <img src="${getHDImage(p.image)}" loading="lazy" 
+                 onclick="openImage('${getHDImage(p.image)}')">
 
             <div class="product-info">
                 <h4>${p.name}</h4>
@@ -221,12 +269,12 @@ function displayProducts(products){
     document.getElementById("products").innerHTML = html;
 }
 
-// تحميل فوري
+// تحميل سريع
 function instantLoad(){
     displayProducts(fastProducts);
 }
 
-// تحميل
+// تحميل من Supabase
 async function loadProducts(){
 
     let cached = localStorage.getItem("products");
