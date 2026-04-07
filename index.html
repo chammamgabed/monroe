@@ -1,212 +1,284 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>My Store</title>
+<title>Deenify</title>
 
 <style>
 body {
+    margin: 0;
     font-family: Arial;
-    text-align: center;
-    background: #f5f5f5;
-}
-
-h2 {
-    margin-top: 20px;
-}
-
-#search {
-    padding: 12px;
-    width: 85%;
-    border-radius: 10px;
-    border: 2px solid #ccc;
-    margin: 10px;
-}
-
-button {
-    padding: 10px 15px;
-    border-radius: 10px;
-    border: none;
-    background: black;
+    background: linear-gradient(135deg,#0f2027,#2c5364);
     color: white;
-    margin: 5px;
-    cursor: pointer;
+}
+
+h1 {
+    text-align: center;
+    padding: 15px;
+}
+
+#searchBox {
+    width: 90%;
+    margin: 10px auto;
+    display: block;
+    padding: 12px;
+    border-radius: 30px;
+    border: none;
+}
+
+#secretBtn {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 120px;
+    opacity: 0;
+}
+
+.panel {
+    display: none;
+    background: white;
+    color: black;
+    margin: 10px;
+    padding: 15px;
+    border-radius: 15px;
+}
+
+#products {
+    display: grid;
+    grid-template-columns: repeat(2,1fr);
+    gap: 12px;
+    padding: 10px;
 }
 
 .product {
-    background: white;
-    margin: 20px auto;
-    padding: 15px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 300px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    background: #1f3b4d;
+    border-radius: 20px;
+    overflow: hidden;
 }
 
 .product img {
     width: 100%;
-    border-radius: 10px;
-    cursor: pointer;
+    height: 140px;
+    object-fit: cover;
 }
 
-.buy-btn {
-    display: inline-block;
-    margin-top: 10px;
-    background: red;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 10px;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-#adminPanel, #loginBox {
-    display: none;
-    background: white;
-    padding: 15px;
-    margin: 20px auto;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 300px;
-}
-
-input {
+.product-info {
     padding: 10px;
-    width: 90%;
-    margin: 5px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
+}
+
+.product-info h4 {
+    height: 45px;
+    overflow-y: auto;
+    font-size: 14px;
+}
+
+.buy {
+    width: 100%;
+    background: #00c6ff;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+}
+
+.deleteBtn {
+    width: 100%;
+    background: black;
+    color: white;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    margin-top: 5px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>🛒 My Store</h2>
+<h1>🛒 Deenify</h1>
 
-<input type="text" id="search" placeholder="🔍 Search..." onkeyup="searchProduct()">
+<input id="searchBox" placeholder="🔍 Search..." onkeyup="searchProducts()">
 
-<br>
-<button onclick="secretClick()">🛍️ Seller Zone</button>
+<button id="secretBtn" onclick="openAdmin()"></button>
 
-<!-- Login -->
-<div id="loginBox">
-    <h3>Seller Login</h3>
-    <input type="password" id="passwordInput" placeholder="Password">
-    <br><br>
-    <button onclick="checkPassword()">Login</button>
+<!-- LOGIN -->
+<div id="loginPanel" class="panel">
+<h3>Admin Login</h3>
+<input id="email" placeholder="Email"><br>
+<input id="password" type="password" placeholder="Password"><br>
+<button onclick="login()">Login</button>
 </div>
 
-<!-- Admin -->
-<div id="adminPanel">
-    <input type="text" id="imgInput" placeholder="Image URL">
-    <input type="text" id="nameInput" placeholder="Product Name">
-    <input type="text" id="linkInput" placeholder="Product Link">
-    <br><br>
-    <button onclick="addProduct()">Add Product</button>
-    <button onclick="closeAdmin()">❌ Close</button>
+<!-- ADMIN -->
+<div id="adminPanel" class="panel">
+<h3>Add Product</h3>
+<input id="name" placeholder="Name"><br>
+<input id="image" placeholder="Image URL"><br>
+<input id="link" placeholder="Link"><br>
+<button onclick="addProduct()">Add</button>
+<br><br>
+<button onclick="logout()">Logout</button>
 </div>
 
 <div id="products"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-const PASSWORD = "xxcb-12";
-let products = JSON.parse(localStorage.getItem("products")) || [];
+const client = supabase.createClient(
+"https://nuwopwcqxewkdazylanb.supabase.co",
+"sb_publishable_F53GV8lPIEHfYb8hPT17SA_wH-7-t2r"
+);
+
+let tap = 0;
 let isAdmin = false;
-let clickCount = 0;
+let allProducts = [];
 
-window.onload = displayProducts;
+// منتجات فورية
+const fastProducts = [
+{ name:"🔥 Hot Product", image:"https://i.imgur.com/8Km9tLL.jpg", link:"#"},
+{ name:"⭐ Best Seller", image:"https://i.imgur.com/QlRphfQ.jpg", link:"#"}
+];
 
-/* زر سري */
-function secretClick() {
-    clickCount++;
-    if (clickCount === 10) {
-        document.getElementById("loginBox").style.display = "block";
-        clickCount = 0;
+// فتح/غلق admin
+function openAdmin(){
+    tap++;
+    if(tap >= 5){
+        tap = 0;
+
+        let login = document.getElementById("loginPanel");
+        let admin = document.getElementById("adminPanel");
+
+        if(login.style.display === "block" || admin.style.display === "block"){
+            login.style.display = "none";
+            admin.style.display = "none";
+        }else{
+            login.style.display = "block";
+        }
+
+        loadProducts(); // تحديث
     }
 }
 
-/* تسجيل دخول */
-function checkPassword() {
-    let pass = document.getElementById("passwordInput").value;
+// login
+async function login(){
+    let email = document.getElementById("email").value;
+    let password = document.getElementById("password").value;
 
-    if (pass === PASSWORD) {
-        isAdmin = true;
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("adminPanel").style.display = "block";
-    } else {
-        alert("Wrong password");
-    }
-}
+    if(!email || !password) return;
 
-/* غلق */
-function closeAdmin() {
-    document.getElementById("adminPanel").style.display = "none";
-    isAdmin = false;
-}
+    const { error } = await client.auth.signInWithPassword({ email, password });
 
-/* حفظ */
-function saveProducts() {
-    localStorage.setItem("products", JSON.stringify(products));
-}
-
-/* إضافة */
-function addProduct() {
-    let img = document.getElementById("imgInput").value.trim();
-    let name = document.getElementById("nameInput").value.trim();
-    let link = document.getElementById("linkInput").value.trim();
-
-    if (!img || !name || !link) {
-        alert("Fill all fields");
+    if(error){
+        alert("Login error");
         return;
     }
 
-    products.push({ img, name, link });
-    saveProducts();
-    displayProducts();
+    isAdmin = true;
 
-    document.getElementById("imgInput").value = "";
-    document.getElementById("nameInput").value = "";
-    document.getElementById("linkInput").value = "";
+    document.getElementById("loginPanel").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+
+    loadProducts();
 }
 
-/* عرض */
-function displayProducts() {
-    let container = document.getElementById("products");
-    container.innerHTML = "";
+// logout
+async function logout(){
+    await client.auth.signOut();
+    isAdmin = false;
+    document.getElementById("adminPanel").style.display = "none";
+    loadProducts();
+}
 
-    products.forEach((p, index) => {
-        container.innerHTML += `
+// عرض
+function displayProducts(products){
+    let html = "";
+
+    let adminVisible = document.getElementById("adminPanel").style.display === "block";
+
+    products.forEach(p=>{
+        html += `
         <div class="product">
-            <h3>${p.name}</h3>
-            <img src="${p.img}" onclick="deleteImage(${index})" onerror="this.style.display='none'">
-            <a href="${p.link}" target="_blank" class="buy-btn">Buy Now</a>
-        </div>
-        `;
+            <img src="${p.image}" loading="lazy">
+
+            <div class="product-info">
+                <h4>${p.name}</h4>
+
+                <button class="buy" onclick="
+                    let link='${p.link}';
+                    if(!link.startsWith('http')) link='https://' + link;
+                    window.open(link)
+                ">Buy</button>
+
+                ${(isAdmin && adminVisible) 
+                ? `<button class="deleteBtn" onclick="deleteProduct('${p.id}')">Delete</button>` 
+                : ""}
+            </div>
+        </div>`;
     });
+
+    document.getElementById("products").innerHTML = html;
 }
 
-/* حذف صورة */
-function deleteImage(index) {
-    if (!isAdmin) return;
+// تحميل فوري
+function instantLoad(){
+    displayProducts(fastProducts);
+}
 
-    if (confirm("Delete this image?")) {
-        products[index].img = "";
-        saveProducts();
-        displayProducts();
+// تحميل
+async function loadProducts(){
+
+    let cached = localStorage.getItem("products");
+
+    if(cached){
+        allProducts = JSON.parse(cached);
+        displayProducts(allProducts);
+    }
+
+    const { data } = await client.from("products").select("*");
+
+    if(data){
+        allProducts = data;
+        displayProducts(allProducts);
+
+        localStorage.setItem("products", JSON.stringify(data));
     }
 }
 
-/* بحث */
-function searchProduct() {
-    let input = document.getElementById("search").value.toLowerCase();
-    let items = document.getElementsByClassName("product");
+// إضافة
+async function addProduct(){
+    if(!isAdmin) return;
 
-    for (let i = 0; i < items.length; i++) {
-        let text = items[i].innerText.toLowerCase();
-        items[i].style.display = text.includes(input) ? "block" : "none";
-    }
+    let name = document.getElementById("name").value;
+    let image = document.getElementById("image").value;
+    let link = document.getElementById("link").value;
+
+    await client.from("products").insert([{name, image, link}]);
+
+    loadProducts();
 }
+
+// حذف
+async function deleteProduct(id){
+    await client.from("products").delete().eq("id", id);
+    loadProducts();
+}
+
+// بحث
+function searchProducts(){
+    let value = document.getElementById("searchBox").value.toLowerCase();
+
+    let filtered = allProducts.filter(p =>
+        p.name.toLowerCase().includes(value)
+    );
+
+    displayProducts(filtered);
+}
+
+// تشغيل
+instantLoad();
+loadProducts();
 </script>
 
 </body>
